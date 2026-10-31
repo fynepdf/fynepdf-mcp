@@ -138,6 +138,7 @@ test("lists the remote tools and the local ones, once each", async () => {
   const names = (await client.listTools()).tools.map((tool) => tool.name);
   assert.deepEqual(names, ["compress_pdf", "upload_file", "upload_local_file", "download_file"]);
   assert.match(client.getInstructions(), /^Remote instructions\.\n.*upload_local_file/s);
+  assert.match(client.getInstructions(), /attached to the chat stays in your own sandbox/);
   assert.equal(client.getServerVersion().name, "fynepdf");
   assert.equal(client.getServerVersion().icons[0].src, "https://fynepdf.com/icon-192.png");
 });
@@ -175,6 +176,16 @@ test("upload_local_file says when there's no file", async () => {
   const result = await call("upload_local_file", { path: join(downloads, "missing.pdf") });
   assert.equal(result.isError, true);
   assert.match(result.text, /There's no file at .*missing\.pdf/);
+});
+
+test("upload_local_file says a chat attachment's sandbox path isn't on this computer", async () => {
+  // Claude Desktop, a PDF attached in Chat: the assistant passed its sandbox copy's path.
+  for (const path of ["/home/claude/FynePDF-Sample.pdf", "/mnt/user-data/uploads/report.pdf", "/mnt/data/scan.pdf"]) {
+    const result = await call("upload_local_file", { path });
+    assert.equal(result.isError, true);
+    assert.ok(result.text.startsWith(`${path} is in your own sandbox, not on this computer`), result.text);
+    assert.ok(result.text.includes(`their Downloads folder is ${downloads}`), result.text);
+  }
 });
 
 test("download_file saves to the downloads folder and never replaces a file", async () => {

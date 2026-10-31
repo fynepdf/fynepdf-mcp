@@ -36,6 +36,8 @@ A remote server can't see files on your computer. The bridge runs on your machin
 - `upload_local_file`: sends a file on this computer to FynePDF and returns its `file_id`.
 - `download_file`: saves a result to your Downloads folder (or a path you name). It never replaces an existing file unless told to.
 
+Name the file by its path ("compress ~/Downloads/report.pdf"). A file attached to the chat goes to the assistant's own sandbox, not your computer, so the bridge can't read it.
+
 ```json
 {
   "mcpServers": {

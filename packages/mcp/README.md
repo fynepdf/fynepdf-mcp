@@ -7,6 +7,8 @@
 
 Everything else (compress, merge, split, convert, OCR, redact, sign, create PDFs, ask and summarize) is the remote server's 24 tools, unchanged.
 
+Name the file by its path ("compress ~/Downloads/report.pdf"). A file attached to the chat goes to the assistant's own sandbox, not your computer, so the bridge can't read it.
+
 ## Set it up
 
 Get an API key in the [developer dashboard](https://fynepdf.com/developers/dashboard). Test keys are free (results are watermarked); live keys get 250 free credits a month.

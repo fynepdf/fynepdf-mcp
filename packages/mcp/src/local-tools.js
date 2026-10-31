@@ -28,15 +28,18 @@ const CONTENT_TYPES = {
 const contentTypeOf = (filename) =>
   CONTENT_TYPES[filename.split(".").pop()?.toLowerCase() ?? ""] ?? "application/octet-stream";
 
+/** Where assistants keep a file attached to the chat: their own code sandbox (Claude, ChatGPT), not this computer. */
+const SANDBOX_PATH = /^\/(home\/claude|mnt\/user-data|mnt\/data)(\/|$)/;
+
 export const LOCAL_INSTRUCTIONS =
-  "This connection runs on the person's computer. To work on a file from it, call upload_local_file with the file's full path (not upload_file). To hand a result back, call download_file with its file_id: it saves the file to their Downloads folder and says where.";
+  "This connection runs on the person's computer. To work on a file from it, call upload_local_file with the file's full path (not upload_file). A file attached to the chat stays in your own sandbox, which this computer can't read: ask the person where the file is on their computer instead. To hand a result back, call download_file with its file_id: it saves the file to their Downloads folder and says where.";
 
 const TOOLS = [
   {
     name: "upload_local_file",
     title: "Upload a file from this computer",
     description:
-      "Send a file on this computer to FynePDF and get a file_id for the other tools. Use it instead of upload_file whenever the file is on this computer. PDFs, Office files, images, EPUB, HTML, Markdown and text.",
+      "Send a file on this computer to FynePDF and get a file_id for the other tools. Use it instead of upload_file whenever the file is on this computer. Paths in your own sandbox (/home/claude, /mnt/user-data, /mnt/data) aren't on this computer. PDFs, Office files, images, EPUB, HTML, Markdown and text.",
     inputSchema: {
       type: "object",
       properties: {
@@ -131,6 +134,11 @@ export function createLocalTools({ apiKey, baseUrl, downloadDir, version, fetchI
   async function upload({ path }) {
     const full = expandPath(path);
     const info = await stat(full).catch(() => null);
+    if (!info?.isFile() && SANDBOX_PATH.test(path.trim())) {
+      throw new ToolError(
+        `${path.trim()} is in your own sandbox, not on this computer: files attached to the chat don't reach this connection. Ask the person where the file is on their computer (their Downloads folder is ${downloadDir}), then call upload_local_file with that path.`,
+      );
+    }
     if (!info?.isFile()) throw new ToolError(`There's no file at ${full}.`);
     const filename = basename(full);
     const type = contentTypeOf(filename);
