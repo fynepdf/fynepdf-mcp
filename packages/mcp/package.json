@@ -13,7 +13,7 @@
   "homepage": "https://fynepdf.com/developers/docs/mcp",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/birazzzz/fynepdf-mcp.git",
+    "url": "git+https://github.com/fynepdf/fynepdf-mcp.git",
     "directory": "packages/mcp"
   },
   "license": "MIT",
