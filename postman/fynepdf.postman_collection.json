@@ -1,0 +1,2405 @@
+{
+  "info": {
+    "name": "FynePDF API",
+    "description": "Compress, convert, OCR, redact, merge, split and generate PDFs, and read them with AI.\n\n1. Get a key at https://fynepdf.com/developers/dashboard (test keys are free; results are watermarked).\n2. Set the collection's `apiKey` variable.\n3. Run **Files, Upload a file**: the file id is kept as `fileId` for every other request.\n\nDocs: https://fynepdf.com/developers/docs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiKey}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.fynepdf.com/v1"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "description": "fyne_live_… or fyne_test_…"
+    },
+    {
+      "key": "fileId",
+      "value": "",
+      "description": "Set by Upload a file."
+    },
+    {
+      "key": "secondFileId",
+      "value": "",
+      "description": "A second file, for merge."
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "description": "Set by any request that starts a job."
+    }
+  ],
+  "item": [
+    {
+      "name": "Account",
+      "description": "The key you're calling with, and the credits left on its account.",
+      "item": [
+        {
+          "name": "The key you're calling with",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": "Which key and account a request runs as, and the limits that apply to it. Costs nothing."
+          }
+        },
+        {
+          "name": "Credits left",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "balance"
+              ]
+            },
+            "description": "The monthly free allowance (AI steps may use only part of it) and bought credits. Steps spend the free allowance first. Costs nothing."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "description": "Every job works on files you add first: by upload URL, by public URL, or in the request body. Files and results are deleted after 24 hours.",
+      "item": [
+        {
+          "name": "Upload a file",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"file\") pm.collectionVariables.set(\"fileId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Pick a PDF, up to 25 MB in the request."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files"
+              ]
+            },
+            "description": "Send the file in the request body (up to 25 MB)."
+          }
+        },
+        {
+          "name": "Add a file from a URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"file\") pm.collectionVariables.set(\"fileId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/report.pdf\",\n  \"filename\": \"report.pdf\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files"
+              ]
+            },
+            "description": "Three ways in:\n- `{filename, size}`: get an `upload_url`, then `PUT` the bytes to it (large files never pass through the API).\n- `{url}`: we fetch a public URL (redirects followed, private addresses refused).\n- `multipart/form-data` with a `file` field: up to 25 MB, ready at once.\nFiles are deleted after 24 hours, or sooner with `ttl_seconds` or DELETE."
+          }
+        },
+        {
+          "name": "List files",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "The account's current files (not deleted or expired), newest first."
+          }
+        },
+        {
+          "name": "Get a file",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{fileId}}"
+                }
+              ]
+            },
+            "description": "The file, with a fresh one-hour `download_url` when it's ready."
+          }
+        },
+        {
+          "name": "Delete a file",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{fileId}}"
+                }
+              ]
+            },
+            "description": "Deletes the bytes now, before their expiry."
+          }
+        },
+        {
+          "name": "Download a file",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/:id/content",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                ":id",
+                "content"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{fileId}}"
+                }
+              ]
+            },
+            "description": "Redirects (302) to a fresh signed link. `curl -L` follows it."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "description": "A job runs one or more steps on your files and returns a receipt: what each step did and what it cost. Wait for it in the request, poll it, or get a webhook.",
+      "item": [
+        {
+          "name": "Run a job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inputs\": [\n    \"{{fileId}}\"\n  ],\n  \"steps\": [\n    {\n      \"action\": \"compress\",\n      \"params\": {\n        \"target_size_bytes\": 5000000\n      }\n    },\n    {\n      \"action\": \"page_numbers\",\n      \"params\": {\n        \"position\": \"bottom-right\"\n      }\n    }\n  ],\n  \"wait\": 30,\n  \"webhook_url\": \"https://example.com/hooks/fynepdf\",\n  \"metadata\": {\n    \"order_id\": \"A-1042\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jobs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jobs"
+              ]
+            },
+            "description": "Input files through up to eight steps; each step feeds the next. Send an `Idempotency-Key` header so a retry never runs twice. Set `wait` to get the finished job in the same call."
+          }
+        },
+        {
+          "name": "List jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jobs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "The account's jobs, newest first."
+          }
+        },
+        {
+          "name": "Price a job without running it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inputs\": [\n    \"{{fileId}}\"\n  ],\n  \"steps\": [\n    {\n      \"action\": \"compress\",\n      \"params\": {\n        \"target_size_bytes\": 5000000\n      }\n    },\n    {\n      \"action\": \"page_numbers\",\n      \"params\": {\n        \"position\": \"bottom-right\"\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/jobs/quote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jobs",
+                "quote"
+              ]
+            },
+            "description": "Checks the steps against the files and returns the credits it would cost. Nothing runs, nothing is charged."
+          }
+        },
+        {
+          "name": "Get a job",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jobs",
+                ":id"
+              ],
+              "query": [
+                {
+                  "key": "wait",
+                  "value": "",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{jobId}}"
+                }
+              ]
+            },
+            "description": "Status, the receipt (pages and sizes before and after each step), and the outputs with fresh download links. `?wait=` up to 60 s waits for it to finish."
+          }
+        },
+        {
+          "name": "Cancel a job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/jobs/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "jobs",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{jobId}}"
+                }
+              ]
+            },
+            "description": "Stops before the next step (a running step finishes first). A canceled job is refunded in full."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Actions",
+      "description": "The catalog of steps a job can run, with their parameters and prices.",
+      "item": [
+        {
+          "name": "What you can run",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actions"
+              ]
+            },
+            "description": "Every action, with its parameters as JSON Schema and its credit price. Costs nothing."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shortcuts",
+      "description": "One action as one call: POST /v1/pdf/<action> with the file and the action's parameters. The same as a one-step job.",
+      "item": [
+        {
+          "name": "Compress PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"target_size_bytes\": 5000000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/compress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "compress"
+              ]
+            },
+            "description": "Make a PDF smaller, at a level or under a target size. The target is checked on the final file; the receipt says whether it was met.\n\nA one-step job (`compress`): 2 credits per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Merge PDFs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_ids\": [\n    \"{{fileId}}\",\n    \"{{secondFileId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/merge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "merge"
+              ]
+            },
+            "description": "Join PDFs into one, in the order given. Each file gets a bookmark with its name.\n\nA one-step job (`merge`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Split PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"ranges\": [\n    \"1-3\",\n    \"4-10\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/split",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "split"
+              ]
+            },
+            "description": "Split a PDF into parts, by page ranges or by a largest part size. Returns a ZIP, so it must be the last step.\n\nA one-step job (`split`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Rotate pages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"angle\": 90,\n  \"pages\": \"all\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/rotate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "rotate"
+              ]
+            },
+            "description": "Turn all pages, one page, or a range, by 90, 180 or 270 degrees clockwise.\n\nA one-step job (`rotate`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Delete pages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"pages\": [\n    2,\n    5\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/delete-pages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "delete-pages"
+              ]
+            },
+            "description": "Remove the listed pages (1-based).\n\nA one-step job (`delete_pages`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Extract pages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"pages\": [\n    1,\n    2,\n    3\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/extract-pages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "extract-pages"
+              ]
+            },
+            "description": "Keep only the listed pages (1-based), as one PDF.\n\nA one-step job (`extract_pages`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Reorder pages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"order\": [\n    3,\n    1,\n    2\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/reorder-pages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "reorder-pages"
+              ]
+            },
+            "description": "Put pages in a new order: [3, 1, 2] makes page 3 first. Pages left out are dropped.\n\nA one-step job (`reorder_pages`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Add page numbers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"format\": \"Page %d of %d\",\n  \"position\": \"bottom-center\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/page-numbers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "page-numbers"
+              ]
+            },
+            "description": "Number the pages. format uses %d twice: \"Page %d of %d\".\n\nA one-step job (`page_numbers`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Add a text watermark",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"text\": \"CONFIDENTIAL\",\n  \"opacity\": 0.2,\n  \"rotation\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/watermark",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "watermark"
+              ]
+            },
+            "description": "Stamp text across every page.\n\nA one-step job (`watermark`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Convert to gray",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/grayscale",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "grayscale"
+              ]
+            },
+            "description": "Turn every color in the PDF to shades of gray.\n\nA one-step job (`grayscale`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Add a password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"password\": \"correct-horse-battery\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/protect",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "protect"
+              ]
+            },
+            "description": "Lock the PDF with a password needed to open it.\n\nA one-step job (`protect`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Remove a password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"password\": \"the-current-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/unlock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "unlock"
+              ]
+            },
+            "description": "Open a locked PDF with its password and save it without one.\n\nA one-step job (`unlock`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Flatten forms and annotations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/flatten",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "flatten"
+              ]
+            },
+            "description": "Burn form fields and annotations into the page so they can't be changed.\n\nA one-step job (`flatten`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Repair PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/repair",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "repair"
+              ]
+            },
+            "description": "Rebuild a damaged PDF's structure so it opens again.\n\nA one-step job (`repair`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Crop pages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"x\": 36,\n  \"y\": 36,\n  \"width\": 540,\n  \"height\": 720\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/crop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "crop"
+              ]
+            },
+            "description": "Keep a rectangle of every page: x and y of its top-left corner, then width and height, in PDF points.\n\nA one-step job (`crop`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Pages per sheet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"n\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/n-up",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "n-up"
+              ]
+            },
+            "description": "Put 2, 4, 6, 8, 9 or 16 pages on each sheet, or lay pages out as a booklet.\n\nA one-step job (`n_up`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Convert to PDF/A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"version\": \"2\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/to-pdfa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "to-pdfa"
+              ]
+            },
+            "description": "Make an archival PDF/A file (level 1b, 2b or 3b). 2b by default.\n\nA one-step job (`to_pdfa`): 2 credits per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "OCR: make scans searchable",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/ocr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "ocr"
+              ]
+            },
+            "description": "Add a text layer to scanned pages so they can be searched and copied.\n\nA one-step job (`ocr`): 1 credit per page. Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "PDF to Word",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/pdf-to-word",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "pdf-to-word"
+              ]
+            },
+            "description": "An editable .docx that keeps the layout. Ends the job.\n\nA one-step job (`pdf_to_word`): 3 credits per 50 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "PDF to Markdown",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/pdf-to-markdown",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "pdf-to-markdown"
+              ]
+            },
+            "description": "The text as Markdown, for pipelines and models. Ends the job.\n\nA one-step job (`pdf_to_markdown`): 2 credits per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "PDF to images",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"format\": \"png\",\n  \"dpi\": 150\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/pdf-to-images",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "pdf-to-images"
+              ]
+            },
+            "description": "Every page as a PNG or JPEG, in a ZIP. Ends the job.\n\nA one-step job (`pdf_to_images`): 2 credits per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "PDF to EPUB",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/pdf-to-epub",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "pdf-to-epub"
+              ]
+            },
+            "description": "A reflowable e-book. Ends the job.\n\nA one-step job (`pdf_to_epub`): 2 credits per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Word, Excel or PowerPoint to PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/office-to-pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "office-to-pdf"
+              ]
+            },
+            "description": "Convert .docx, .doc, .odt, .rtf, .xlsx, .xls, .ods, .pptx, .ppt or .odp to PDF. First step only.\n\nA one-step job (`office_to_pdf`): 3 credits per 50 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Images to PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_ids\": [\n    \"{{fileId}}\",\n    \"{{secondFileId}}\"\n  ],\n  \"page_size\": \"A4\",\n  \"orientation\": \"auto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/image-to-pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "image-to-pdf"
+              ]
+            },
+            "description": "One page per image, in the order given (JPEG, PNG, WebP, HEIC, GIF, BMP, TIFF). First step only.\n\nA one-step job (`image_to_pdf`): 2 credits per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "EPUB to PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/epub-to-pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "epub-to-pdf"
+              ]
+            },
+            "description": "Lay an e-book out as a PDF. First step only.\n\nA one-step job (`epub_to_pdf`): 2 credits per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Web page or HTML to PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com\",\n  \"layout\": \"desktop\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/html-to-pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "html-to-pdf"
+              ]
+            },
+            "description": "Render a public web page, or HTML you send, to PDF. Takes no input file, so it is the first step of a job with no inputs.\n\nA one-step job (`html_to_pdf`): 3 credits per 50 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Create a PDF from Markdown, HTML or data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"invoice\",\n  \"data\": {\n    \"invoice_number\": \"INV-104\",\n    \"currency\": \"USD\",\n    \"customer\": {\n      \"name\": \"Acme Ltd\"\n    },\n    \"line_items\": [\n      {\n        \"description\": \"Consulting\",\n        \"quantity\": 3,\n        \"unit_price\": 120\n      }\n    ],\n    \"tax_rate\": 10\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/create-pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "create-pdf"
+              ]
+            },
+            "description": "Write the content, get a well-set PDF: Markdown or HTML, a template (plain, report, invoice, letter, resume) in a quiet or classic style, page size, margins, header, footer and page numbers. Or send an invoice's, resume's or letter's fields as data and we lay it out; an invoice is added up and checked. Takes no input file.\n\nA one-step job (`create_pdf`): 2 credits per 20 pages made (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Redact",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"text\": [\n    \"Jane Doe\",\n    \"555-0142\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/redact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "redact"
+              ]
+            },
+            "description": "Remove content for real, not just cover it: rectangles you give (areas), or every occurrence of text you name (text). Text redaction is checked on the result: if any of it can still be found, the step fails and nothing is returned.\n\nA one-step job (`redact`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Sign",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"signature_file_id\": \"file_01jc8x6r9t1v3x5z7b9c2d\",\n  \"page\": \"last\",\n  \"position\": \"bottom-right\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "sign"
+              ]
+            },
+            "description": "Stamp a signature image (PNG or JPEG, uploaded as a file) on a page: at a named spot, or at x and y in points from the top-left corner. Width in points; the height follows the image.\n\nA one-step job (`sign`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Edit or remove document properties",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"title\": \"Q3 report\",\n  \"author\": \"Finance team\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/metadata",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "metadata"
+              ]
+            },
+            "description": "Set the title, author, subject and keywords, or remove every property.\n\nA one-step job (`metadata`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Set bookmarks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"items\": [\n    {\n      \"title\": \"Summary\",\n      \"page\": 1\n    },\n    {\n      \"title\": \"Figures\",\n      \"page\": 4,\n      \"level\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/bookmarks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "bookmarks"
+              ]
+            },
+            "description": "Replace the bookmarks (outline) with your own: a title and a page each, nested by level (0 = top).\n\nA one-step job (`bookmarks`): 1 credit per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "PDF to Excel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"mode\": \"tables\",\n  \"format\": \"xlsx\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/pdf-to-excel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "pdf-to-excel"
+              ]
+            },
+            "description": "Tables to a spreadsheet. mode tables: detected from the page, no AI. mode ai: a model reads the tables (scans too). mode statement: bank statements as one checked sheet, totals compared with the statement's own. Ends the job.\n\nA one-step job (`pdf_to_excel`): 3 credits per 50 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "Extract images",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/extract-images",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "extract-images"
+              ]
+            },
+            "description": "Every image in the PDF, at its own resolution, in a ZIP. Ends the job.\n\nA one-step job (`extract_images`): 2 credits per 100 pages (started). Waits up to 30 s for the result by default."
+          }
+        },
+        {
+          "name": "PDF to LaTeX",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"format\": \"latex\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pdf/pdf-to-latex",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pdf",
+                "pdf-to-latex"
+              ]
+            },
+            "description": "A .tex file (zipped with an images folder when the PDF has pictures). Ends the job.\n\nA one-step job (`pdf_to_latex`): 3 credits per 50 pages (started). Waits up to 30 s for the result by default."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "description": "Questions, summaries, data extraction, redaction finding and edits by instruction. Answers cite their pages; extracted invoices are checked by arithmetic.",
+      "item": [
+        {
+          "name": "Ask a PDF a question",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"question\": \"What is the notice period in this contract?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/ask",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "ask"
+              ]
+            },
+            "description": "An answer from the document only, with page citations. Every quote is checked against the page text; `verified: false` marks one that couldn't be found. Price: 2 credits for up to 10 pages read, +1 per further 10."
+          }
+        },
+        {
+          "name": "Summarize a PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"length\": \"short\",\n  \"focus\": \"risks and deadlines\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/summarize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "summarize"
+              ]
+            },
+            "description": "A plain summary and key points, each with the pages it comes from. Priced like ask."
+          }
+        },
+        {
+          "name": "Extract data from a PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"type\": \"invoice\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/extract",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "extract"
+              ]
+            },
+            "description": "Structured data, checked in code where it can be:\n- `invoice`: numbers, dates, parties, lines and totals; lines, subtotal, tax and total are added up and compared.\n- `statement`: a bank statement's transactions; totals and balances compared with the statement's own figures.\n- `tables`: every table, cell by cell, with its page.\n- `schema`: your own JSON Schema (an object, up to 20 KB).\n`unverified` lists values that couldn't be found in the document's text. Price: 2 credits per page read."
+          }
+        },
+        {
+          "name": "Find what to redact",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"request\": \"every person's name and phone number\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/redact-find",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "redact-find"
+              ]
+            },
+            "description": "Say what to hide (\"names, emails and account numbers\"); code searches the text and the model only plans the search and spots names. Returns every match by page, and a ready `redact` step that removes them (and proves it). Price: 2 credits + 1 per 2 pages."
+          }
+        },
+        {
+          "name": "Edit a PDF by instruction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.object === \"job\") pm.collectionVariables.set(\"jobId\", body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A retry with the same key never runs or charges twice."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"file_id\": \"{{fileId}}\",\n  \"instruction\": \"Remove the blank pages and add page numbers at the bottom\",\n  \"run\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/edit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "edit"
+              ]
+            },
+            "description": "\"Remove the blank pages, number the rest and make it PDF/A\": the model plans steps from the action catalog; code checks the plan exactly like a job. `run: true` starts it as a job (its steps are priced as usual). Planning is priced like ask; a plan that can't run costs nothing."
+          }
+        }
+      ]
+    }
+  ]
+}

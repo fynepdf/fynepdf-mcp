@@ -1,0 +1,42 @@
+{
+  "name": "@fynepdf/mcp",
+  "version": "0.1.0",
+  "description": "FynePDF's MCP server over stdio, with tools to upload files from this computer and save results to it.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "pdf",
+    "fynepdf",
+    "claude",
+    "cursor"
+  ],
+  "homepage": "https://fynepdf.com/developers/docs/mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/birazzzz/fynepdf-mcp.git",
+    "directory": "packages/mcp"
+  },
+  "license": "MIT",
+  "author": "FynePDF <support@fynepdf.com> (https://fynepdf.com)",
+  "mcpName": "com.fynepdf/fynepdf",
+  "type": "module",
+  "bin": {
+    "fynepdf-mcp": "bin/fynepdf-mcp.js"
+  },
+  "exports": "./src/bridge.js",
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1"
+  }
+}

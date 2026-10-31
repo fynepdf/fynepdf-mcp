@@ -1,0 +1,54 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.fynepdf/fynepdf",
+  "title": "FynePDF",
+  "description": "Compress, merge, convert, OCR, redact and sign PDFs, generate new ones, and read them with AI.",
+  "version": "0.1.0",
+  "websiteUrl": "https://fynepdf.com/developers/mcp",
+  "repository": {
+    "url": "https://github.com/birazzzz/fynepdf-mcp",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://fynepdf.com/logo-512.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "512x512"
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.fynepdf.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Optional. Bearer and a FynePDF API key, instead of signing in with OAuth.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@fynepdf/mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "FYNEPDF_API_KEY",
+          "description": "A FynePDF API key (fyne_live_… or fyne_test_…) from https://fynepdf.com/developers/dashboard",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
