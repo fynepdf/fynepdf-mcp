@@ -59,6 +59,7 @@ Get a key in the [developer dashboard](https://fynepdf.com/developers/dashboard)
 | `upload_file` | Bring a file in: a drop zone in Claude, ChatGPT and VS Code, or a signed upload link |
 | `import_file_from_url` | Fetch a PDF, Office file, image or EPUB from a public link |
 | `get_file` | A file's details and a fresh download link |
+| `list_files` | Recent files (last 24 hours), to find one the person just uploaded by name |
 | `list_library_files`, `save_to_library` | Use and keep files in your FynePDF Library |
 | `merge_pdfs`, `split_pdf`, `edit_pages` | Join, split, delete, keep, reorder and rotate pages |
 | `stamp_pdf` | Page numbers, a watermark, or both |

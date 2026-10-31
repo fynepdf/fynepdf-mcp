@@ -5,7 +5,7 @@
 - `upload_local_file`: sends a file on this computer to FynePDF and returns its `file_id` for the other tools.
 - `download_file`: saves a result to your Downloads folder, or a folder or path you name. It never replaces an existing file unless `overwrite` is true.
 
-Everything else (compress, merge, split, convert, OCR, redact, sign, create PDFs, ask and summarize) is the remote server's 24 tools, unchanged.
+Everything else (compress, merge, split, convert, OCR, redact, sign, create PDFs, ask and summarize) is the remote server's 25 tools, unchanged.
 
 Name the file by its path ("compress ~/Downloads/report.pdf"). A file attached to the chat goes to the assistant's own sandbox, not your computer, so the bridge can't read it.
 
