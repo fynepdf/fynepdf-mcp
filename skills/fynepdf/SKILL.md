@@ -12,7 +12,7 @@ FynePDF's tools keep files on FynePDF between calls. Every tool takes a `file_id
 - **The person attached or dropped a file:** call `upload_file` and let them use its drop zone, or pass the attachment where the client hands files over (ChatGPT does).
 - **The file is on this computer** (the local `npx @fynepdf/mcp` server): `upload_local_file` with the full path.
 - **A public link:** `import_file_from_url`.
-- **They used the upload box** ("Uploaded report.pdf to FynePDF"): find its `file_id` by name with `list_files`.
+- **They used the upload box** ("File uploaded (ID: file_…)"): use that `file_id`. If they name a file without its ID, find it by name with `list_files`.
 - **Their FynePDF Library:** `list_library_files`, then pass `library_file_id`.
 - **A code sandbox or agent:** `upload_file` with `file_name` and `size_bytes` returns a signed `upload_url` and a ready `curl` command.
 
