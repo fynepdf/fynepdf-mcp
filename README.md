@@ -26,6 +26,7 @@ This repository holds the server's registry entry, the local bridge (`npx @fynep
 | Cursor | [Add to Cursor](https://fynepdf.com/developers/docs/mcp/cursor) |
 | VS Code | [Add to VS Code](https://fynepdf.com/developers/docs/mcp/vscode) |
 | Claude Code | `claude mcp add --transport http fynepdf https://api.fynepdf.com/mcp` |
+| Gemini CLI | `gemini extensions install https://github.com/fynepdf/fynepdf-mcp` |
 
 Any client that speaks remote MCP works the same way: give it the URL, and it signs in with OAuth the first time a tool needs your account. Work then counts against your fynepdf.com plan, as on the website. Agents of your own can send an [API key](https://fynepdf.com/developers/docs/authentication) as the bearer token instead; that spends API credits.
 

@@ -1,0 +1,10 @@
+{
+  "name": "fynepdf",
+  "version": "0.1.0",
+  "description": "PDF tools for Gemini CLI: compress, merge, split, convert, OCR, redact, sign and create PDFs, and ask questions about them. Sign in with your FynePDF account when a tool first needs it.",
+  "mcpServers": {
+    "fynepdf": {
+      "httpUrl": "https://api.fynepdf.com/mcp"
+    }
+  }
+}
