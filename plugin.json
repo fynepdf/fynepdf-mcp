@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "fynepdf",
+  "version": "0.1.0",
+  "description": "PDF tools for your agent: compress, merge, split, convert, OCR, redact, sign and create PDFs, and ask questions about them. Results come back as files you can download or keep.",
+  "author": { "name": "FynePDF", "email": "support@fynepdf.com" },
+  "homepage": "https://fynepdf.com/developers/docs/mcp",
+  "repository": "https://github.com/fynepdf/fynepdf-mcp",
+  "license": "MIT",
+  "keywords": ["pdf", "compress-pdf", "merge-pdf", "pdf-to-word", "pdf-to-excel", "ocr", "redact", "sign-pdf", "create-pdf", "mcp"]
+}
