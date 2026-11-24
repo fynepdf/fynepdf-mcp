@@ -88,6 +88,7 @@ Files live on FynePDF only while they're worked on: they're deleted after 24 hou
 - [`server.json`](server.json): the entry in the [MCP Registry](https://registry.modelcontextprotocol.io) as `com.fynepdf/fynepdf`.
 - [`skills/fynepdf`](skills/fynepdf): a Claude skill that teaches the tools' good habits.
 - [`postman`](postman): a Postman collection for the REST API.
+- [![fynepdf/fynepdf-mcp MCP server](https://glama.ai/mcp/servers/fynepdf/fynepdf-mcp/badges/score.svg)](https://glama.ai/mcp/servers/fynepdf/fynepdf-mcp): the listing on Glama.
 
 Prefer code? The [REST API](https://fynepdf.com/developers/docs) has the same actions, with SDKs for [Node](https://www.npmjs.com/package/fynepdf) and [Python](https://pypi.org/project/fynepdf/).
 
